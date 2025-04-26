@@ -1,0 +1,15 @@
+# requirements.txt
+
+# --- Core Google ADK Library ---
+# IMPORTANT: Replace 'google-adk' below with the actual pip package name
+#            found in the ADK documentation (e.g., google-cloud-adk, etc.)
+google-adk # Replace this line with the correct package!
+
+# --- Google Generative AI (used by runner example in previous code) ---
+google-generativeai
+
+# --- Pydantic (potentially used by ADK BaseAgent or good practice) ---
+pydantic>=2.0.0
+
+# --- Optional: For loading .env files during development ---
+python-dotenv>=1.0.0

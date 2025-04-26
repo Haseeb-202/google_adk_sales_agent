@@ -1,0 +1,5 @@
+lead_id,name,age,country,interest,status,last_agent_msg_ts,follow_up_sent_flag
+L001,Alice,22,USA,shoes,secured,,False
+L002,Bob,,,,awaiting_consent,2025-04-26T22:50:41.959639,False
+L003,Charlie,,,,awaiting_consent,,
+L004,David,,,,awaiting_consent,,
