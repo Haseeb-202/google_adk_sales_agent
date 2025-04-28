@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Chat - {{ lead_id }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="chat-container">
+        <h1>Conversation with {{ lead_id }}</h1>
+        <div id="chat-transcript" class="chat-transcript">
+            <!-- Chat history will be loaded here -->
+            {% for msg in history %}
+                <div class="message {{ msg.author.lower() }}">
+                    <span class="author">{{ msg.author }}:</span>
+                    <span class="text">{{ msg.text }}</span>
+                </div>
+            {% endfor %}
+        </div>
+        <form id="message-form" class="message-form">
+            <input type="text" id="message-input" placeholder="Type your message..." autocomplete="off" required>
+            <button type="submit">Send</button>
+        </form>
+        <div id="error-message" class="error-message"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

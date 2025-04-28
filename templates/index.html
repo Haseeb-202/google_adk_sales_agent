@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Start Sales Chat</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Sales Agent Lead Capture</h1>
+        <form action="{{ url_for('start_chat') }}" method="post" class="lead-form">
+            <label for="lead_id">Lead ID:</label>
+            <input type="text" id="lead_id" name="lead_id" required>
+
+            <label for="lead_name">Lead Name:</label>
+            <input type="text" id="lead_name" name="lead_name" required>
+
+            <button type="submit">Start Conversation</button>
+        </form>
+    </div>
+</body>
+</html>
