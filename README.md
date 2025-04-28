@@ -97,4 +97,8 @@ Interact with the agent simulation via the command line:
 *   **Follow-up Sending:** The background thread can only *detect* when a follow-up is needed based on CSV data. Actually sending the message requires a specific proactive messaging function from the ADK library, which is currently represented by a placeholder and a warning log. If the ADK provides such a function, the `follow_up_checker` needs to be updated to call it.
 *   **Error Handling:** Error handling is basic. Production code would need more robust handling for CSV I/O errors, ADK API errors, unexpected user input, etc.
 *   **Lead Name Trigger:** The simulation assumes the lead name is passed during the initial `trigger` command. How this name is provided in a real deployment depends on the actual ADK trigger mechanism.
+<<<<<<< HEAD
 *   **ADK Package Name:** The specific `pip` package name for the ADK library needs to be confirmed and updated in `requirements.txt`.
+=======
+*   **ADK Package Name:** The specific `pip` package name for the ADK library needs to be confirmed and updated in `requirements.txt`.
+>>>>>>> 2f208f7072e4e373363eaadf41cee982dc06b677
