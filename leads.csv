@@ -1,14 +1,10 @@
 lead_id,name,age,country,interest,status,last_agent_msg_ts,follow_up_sent_flag
-L001,Alice,21,Usa,shoes,secured,,False
-L002,Bob,,,,declined_final,2025-04-28T19:57:27.305474+00:00,False
-L003,Meesam,,,,declined_final,2025-04-28T19:58:14.241733+00:00,False
-L004,Abrar,,,,declined_final,,False
-L005,Ali,21,pakistan,no,secured,,False
-L006,Sahil,,,,declined_final,,False
-L007,Sara,,,,declined_final,,True
-L008,Parveen,,,,declined_final,,False
-L009,Meesam,,,,declined_final,,False
-L0010,Shahmeer,,,,declined_final,,True
-L0011,Saed,,,,declined_final,,True
-L012,Misha,,,,declined_final,,False
-L013,Lubna,,,,declined_final,,True
+L001,Ali,21,Pakistan,Cloud Services,secured,,False
+L002,Ibrahim,,,,awaiting_consent,2025-04-28T23:32:02.146709+00:00,True
+L003,Tahir,,,,awaiting_age,,False
+L005,Javaid,,,,awaiting_consent,2025-04-28T23:34:36.073847+00:00,True
+L007,Bismah,,,,awaiting_age,,False
+L008,Javeria,21,Pakistan,cloud services,secured,,False
+L009,Asad,21,Canada,shampoo,secured,,False
+L010,ROB,,,,awaiting_followup_after_decline,2025-04-28T23:50:33.153109+00:00,False
+L011,SAK,23,,,awaiting_country,2025-04-28T23:50:40.998807+00:00,False
