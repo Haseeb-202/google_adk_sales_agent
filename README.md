@@ -1,3 +1,28 @@
+# Google ADK Sales Agent (Flask Web Application)
+
+## Project Overview
+
+This project implements a conversational sales agent designed to handle multiple leads concurrently, guide them through a qualification process, store data, and manage follow-ups. It uses a Google Agent Development Kit (ADK) structure (specifically `BaseAgent`, `Runner`, `InvocationContext`) integrated within a Flask web application for user interaction.
+
+The agent follows a predefined flow: asking for consent, then sequentially collecting age, country, and product interest. Data for each lead is persisted in a `leads.csv` file. A background thread monitors conversations and queues follow-up messages for unresponsive leads (including those who initially decline consent), which are then displayed to the user via client-side polling.
+
+## Features
+
+*   **Web Interface:** Provides a simple web UI (built with Flask and basic HTML/CSS/JS) for lead triggering and conversation interaction.
+*   **Conversational Flow:** Implements the required sequence: Consent -> Age -> Country -> Interest.
+*   **ADK `BaseAgent` Structure:** Core logic encapsulated in `SalesFlowAgent` inheriting from `BaseAgent`.
+*   **ADK Session State:** Uses the ADK's `InMemorySessionService` and `ctx.session.state`, persisting changes via `state_delta` in yielded `Event` objects.
+*   **Concurrent Session Handling:** The underlying ADK components and session service manage distinct conversation states for different `lead_id`s. (Note: True parallel request handling depends on the WSGI server used for deployment).
+*   **CSV Data Persistence:** Lead details (`lead_id`, `name`, `age`, `country`, `interest`, `status`) and follow-up metadata are stored in `leads.csv`.
+*   **Thread-Safe CSV:** `DataManager` class uses `threading.Lock` for safe concurrent writes to `leads.csv`.
+*   **Follow-Up Mechanism:**
+    *   Handles follow-ups for leads stalled during questioning *and* for leads who initially decline consent.
+    *   Uses a background thread (`follow_up_checker`) to monitor `leads.csv` for timeouts based on `last_agent_msg_ts`.
+    *   Uses a simulated delay (`SIMULATED_24H_DELAY_SECONDS`) for testing.
+    *   Queues follow-up messages in a server-side dictionary (`pending_followups`).
+    *   Frontend polls (`/check_followup` endpoint) to retrieve and display queued follow-up messages.
+*   **Server-Side Chat History:** Chat transcripts are stored in server memory (`chat_histories` dictionary) to persist across page refreshes (but not server restarts).
+
 
 ## Setup Instructions
 
@@ -18,87 +43,84 @@
     ```
 
 3.  **Install Dependencies:**
-    *   **Find the correct ADK package name:** Check the official documentation for the specific Google ADK library you installed that provides `google.adk.agents`, `google.adk.sessions`, etc.
-    *   **Edit `requirements.txt`:** Replace the placeholder line `# google-adk>=1.0.0 # Placeholder name...` with the actual package name and version (if known). For example, if the package is `g-corp-adk`, the line might just be `g-corp-adk`.
+    *   **Confirm ADK Package Name:** Check the official documentation for the specific Google ADK library that provides `google.adk.agents`, `google.adk.sessions`, etc.
+    *   **Edit `requirements.txt`:** Replace the placeholder line starting with `google-adk>=...` with the correct package name found in the ADK documentation.
     *   **Install:**
         ```bash
         pip install -r requirements.txt
         ```
-        This will install the specified ADK library, `google-generativeai` (used for message types), `pydantic` (likely dependency), and `python-dotenv` (optional).
 
 4.  **Authentication (If Required by ADK):**
-    *   Although this agent doesn't directly call LLMs, the underlying ADK framework *might* require Google Cloud authentication.
-    *   If you encounter authentication errors during startup, try authenticating your environment using the Google Cloud CLI:
+    *   While this specific agent logic doesn't call external authenticated Google APIs *directly*, the underlying ADK framework might.
+    *   If you encounter authentication errors, try authenticating your environment using the Google Cloud CLI:
         ```bash
         gcloud auth application-default login
         ```
-    *   Consult the specific ADK documentation for detailed authentication requirements.
+    *   Refer to the specific ADK documentation for its authentication needs.
 
 5.  **Environment Variables (Optional):**
-    *   If the ADK requires API keys or specific configurations, create a `.env` file in the root directory and add them (e.g., `GOOGLE_API_KEY=your_key`). The script uses `python-dotenv` to load these if the file exists. Remember to add `.env` to your `.gitignore`.
+    *   If needed, create a `.env` file in the root directory for settings like `FLASK_SECRET_KEY`.
 
-## Running the Simulation
+## Running the Application
 
 1.  Make sure your virtual environment is activated.
-2.  Run the main script from the project's root directory:
+2.  Run the Flask application from the project's root directory:
     ```bash
-    python sales_agent_adk_structured.py
+    flask run
+    # Or: python app.py
     ```
-3.  The script will start, initialize the components, and present a command-line prompt `>>>`.
+3.  Flask will start a development server, typically accessible at `http://127.0.0.1:5000`. Open this address in your web browser.
 
-## Usage Guide (Simulation Commands)
+## Usage Guide
 
-Interact with the agent simulation via the command line:
+1.  **Start:** Navigate to the application URL in your browser (e.g., `http://127.0.0.1:5000`). You will see the "Sales Agent Lead Capture" form.
+2.  **Trigger Lead:** Enter a unique **Lead ID** (e.g., `LEAD001`) and a **Lead Name** (e.g., `Alice`). Click "Start Conversation".
+3.  **Chat:** You will be redirected to the chat interface. The agent's initial greeting should appear. Type your responses in the input box at the bottom and press Enter or click "Send".
+4.  **Concurrency:** Open another browser tab/window, navigate to the application URL again, and trigger a *different* lead (e.g., `LEAD002`, `Bob`). You can now switch between tabs and interact with both leads independently.
+5.  **Follow-up Test:**
+    *   Start a lead (e.g., `LEAD_STALL`).
+    *   Answer the first question (e.g., `yes`).
+    *   Wait for the agent to ask the next question (e.g., "What is your age?").
+    *   **Do not answer.** Wait longer than the simulated delay (default 30s) + polling interval (default 7s).
+    *   The follow-up message ("Just checking in...") should appear automatically in the chat window for `LEAD_STALL` after the delay.
+    *   You can also test the decline follow-up by saying "no" to the initial consent and waiting.
+6.  **Exit:** Close the browser tabs. Stop the Flask server in the terminal by pressing `Ctrl+C`.
 
-*   **Start a new conversation:**
-    ```
-    >>> trigger [lead_id] [name]
-    ```
-    Example: `>>> trigger L001 Alice`
-    Example: `>>> trigger CUST50 Bobert Smith`
+## Code Explanation
 
-*   **Send a message as a lead:**
-    ```
-    >>> [lead_id] [message]
-    ```
-    Example: `>>> L001 yes please`
-    Example: `>>> CUST50 35`
-    Example: `>>> L001 I am interested in cloud storage`
-
-*   **Exit the simulation:**
-    ```
-    >>> quit
-    ```
-
-**Observe:**
-*   Watch the command line for messages printed by the agent.
-*   Monitor the console output for INFO and DEBUG logs showing the agent's internal state transitions.
-*   Check the `leads.csv` file (created in the same directory) to see how lead data and statuses are updated.
-
-## Testing
-
-*   **Happy Path:** Run a lead through the entire flow (`trigger -> yes -> age -> country -> interest`) and verify the final status in `leads.csv` is "secured".
-*   **Consent Decline:** Trigger a lead and respond with "no" or similar. Verify the agent responds appropriately and the status in `leads.csv` is "no_response".
-*   **Concurrency:** Trigger multiple leads (e.g., L001, L002) quickly. Interleave messages for them (`L001 yes`, `L002 ok`, `L001 30`, `L002 25`, etc.). Verify that each conversation proceeds independently and the data in `leads.csv` is correct for each lead.
-*   **Invalid Input:** Provide non-numeric input when asked for age. Verify the agent re-prompts correctly.
-*   **Follow-up Simulation:** Trigger a lead, answer one or two questions, then wait longer than `SIMULATED_24H_DELAY_SECONDS` (default 30s) + `FOLLOW_UP_CHECK_INTERVAL_SECONDS` (default 5s). Observe the logs for the `Follow-up condition met...` message and the `PROACTIVE SEND NEEDED...` warning. Check that the `follow_up_sent_flag` in `leads.csv` is updated to `True` (due to the simulation placeholder). Then, send a message for that lead and verify the conversation continues correctly.
+*   **`app.py`:** The Flask web server.
+    *   Initializes Flask, ADK components (`Runner`, `SessionService`), `DataManager`, and the `SalesFlowAgent`.
+    *   Starts the `follow_up_checker` background thread.
+    *   Defines routes:
+        *   `/`: Shows the lead form (`index.html`).
+        *   `/start_chat`: Handles form submission, creates/resets ADK session and server-side history, runs the agent's first turn, stores initial messages, redirects to `/chat`. Uses Flask session cookie to store the user's current `lead_id`.
+        *   `/chat`: Displays the chat UI (`chat.html`), retrieving the conversation history from the server-side dictionary based on the `lead_id` in the Flask session.
+        *   `/send_message`: Receives user messages (via JavaScript `fetch`), runs the corresponding agent turn via the `Runner`, appends user/agent messages to the server-side history, and returns agent responses as JSON.
+        *   `/check_followup`: Endpoint polled by JavaScript. Checks a shared dictionary (`pending_followups`) populated by the background thread, returning any queued follow-up message for the user's `lead_id`.
+    *   Manages server-side chat history (`chat_histories`) and pending follow-ups (`pending_followups`) using Python dictionaries and `threading.Lock` for safety.
+*   **`agent/sales_agent_logic.py`:** Contains the core agent.
+    *   `SalesFlowAgent`: Inherits `BaseAgent`. `_run_async_impl` contains the state machine logic. It gets session state (`ctx.session.state`), determines the next step based on the current step and user input, calculates necessary state changes (`state_changes`), yields `Event` objects containing agent text (`content`) and state updates (`actions.state_delta`). Uses `DataManager` to update CSV. Handles the `awaiting_followup_after_decline` state.
+    *   `follow_up_checker`: Function run in a background thread. Reads `leads.csv` via `DataManager`, checks timestamps/flags, identifies overdue leads, and adds the follow-up message to the shared `pending_followups` dictionary (protected by a lock passed from `app.py`). It *simulates* updating the follow-up flag in the CSV after queuing.
+*   **`agent/data_manager.py`:** Class responsible for all thread-safe interactions with `leads.csv` using a `threading.Lock`. Reads and writes lead data including status and follow-up metadata. Filters leads for the checker thread.
+*   **`templates/` & `static/`:** Standard Flask structure for HTML templates and static files (CSS, JS).
+    *   `script.js`: Handles form submission for sending messages, dynamically updates the chat transcript, and polls the `/check_followup` endpoint periodically to display follow-up messages.
 
 ## Design Decisions
 
-*   **Agent Structure:** Utilized `google.adk.agents.BaseAgent` as inspired by example ADK structures, implementing the core logic within `_run_async_impl`.
-*   **State Management:** Leveraged the ADK's session state (`ctx.session.state`) assuming it uses the custom `State` object internally. State changes are calculated within the turn and explicitly included in the `state_delta` field of the `EventActions` attached to the yielded `Event`, relying on the ADK framework to persist these deltas.
-*   **Data Persistence:** Implemented a thread-safe `DataManager` class using `threading.Lock` to handle reads/writes to the mandatory `leads.csv` file. This ensures integrity during concurrent agent turns.
-*   **Concurrency Handling:** Relies on the ADK `Runner` to manage concurrent execution of `_run_async_impl` for different sessions. Thread-safety for shared resources (CSV file) is handled explicitly.
-*   **Follow-up:** Implemented via a separate background thread checking the CSV file. This approach was chosen due to the apparent lack of a documented proactive messaging API in the specific ADK examples referenced. It has known limitations in accessing real-time session state and depends heavily on ADK capabilities for actually *sending* the follow-up message. Timestamps and flags are stored in the CSV to facilitate this check.
-*   **Simulation:** Included an interactive command-line loop within the `if __name__ == "__main__":` block for easy local testing and demonstration without needing a separate UI or complex setup.
+*   **Framework:** Chose Flask for its simplicity in creating the web interface and handling requests.
+*   **ADK Structure:** Adopted the `BaseAgent`/`Runner`/`InvocationContext`/`Event` structure based on provided examples, assuming this reflects the target ADK.
+*   **State Management:**
+    *   **Conversational State:** Utilized the ADK's `ctx.session.state` and the `state_delta` mechanism within yielded `Events` for turn-to-turn persistence, as inferred from the `State` and `EventActions` classes. A local copy (`current_turn_state`) is used within `_run_async_impl` for easier manipulation before calculating the final delta.
+    *   **Chat History:** Stored server-side in a Python dictionary (`chat_histories`) keyed by `lead_id` to persist across page refreshes. Protected by a `Lock`. *Limitation: Lost on server restart.*
+    *   **Follow-up Queue:** Used a server-side dictionary (`pending_followups`) and `Lock` for the background thread to communicate needed follow-ups to the main Flask process serving the polling endpoint.
+*   **Data Persistence:** Used `leads.csv` as mandated by requirements. Encapsulated all CSV logic in a thread-safe `DataManager` class using `threading.Lock`.
+*   **Concurrency:** Relied on the ADK `Runner`'s presumed internal concurrency (threads/asyncio) and ensured the shared `DataManager` was thread-safe. Used `threaded=True` in `app.run` for development testing (a production server like Gunicorn is needed for true concurrent request handling).
+*   **Follow-up Implementation:** Due to the lack of a clear ADK mechanism for proactive server-to-client pushes in this context, a client-side polling approach (`/check_followup`) was implemented. The background thread identifies needed follow-ups from the CSV, queues them server-side, and the frontend periodically asks if a message is waiting. The thread simulates the CSV flag update, acknowledging this isn't ideal but necessary for the detection loop.
 
-## Known Limitations / Future Improvements
+## Known Limitations
 
-*   **Follow-up Sending:** The background thread can only *detect* when a follow-up is needed based on CSV data. Actually sending the message requires a specific proactive messaging function from the ADK library, which is currently represented by a placeholder and a warning log. If the ADK provides such a function, the `follow_up_checker` needs to be updated to call it.
-*   **Error Handling:** Error handling is basic. Production code would need more robust handling for CSV I/O errors, ADK API errors, unexpected user input, etc.
-*   **Lead Name Trigger:** The simulation assumes the lead name is passed during the initial `trigger` command. How this name is provided in a real deployment depends on the actual ADK trigger mechanism.
-<<<<<<< HEAD
-*   **ADK Package Name:** The specific `pip` package name for the ADK library needs to be confirmed and updated in `requirements.txt`.
-=======
-*   **ADK Package Name:** The specific `pip` package name for the ADK library needs to be confirmed and updated in `requirements.txt`.
->>>>>>> 2f208f7072e4e373363eaadf41cee982dc06b677
+*   **Follow-up Sending:** The `follow_up_checker` thread *detects* when follow-ups are needed but relies on client-side polling (`/check_followup`) rather than a direct server push (like WebSockets) to display the message. The simulation also relies on the thread updating the CSV flag, which ideally the agent logic should handle upon successful message delivery confirmation (which isn't possible here). True proactive sending requires different frontend/backend communication or specific ADK features.
+*   **Server-Side Storage Volatility:** Chat history and pending follow-ups are stored in memory and lost if the Flask server restarts. A database or external cache (like Redis) would be needed for persistence.
+*   **Concurrency in Development:** The Flask development server (`flask run`) typically handles requests serially, not truly concurrently. Testing high concurrency requires a production WSGI server (e.g., Gunicorn, Waitress).
+*   **ADK Specifics:** The implementation assumes the behavior of the imported ADK components based on examples. The exact behavior of state persistence via `state_delta` and the existence of proactive messaging APIs should be verified against the official documentation for the specific ADK library version used.
+*   **Error Handling:** Error handling is basic and could be made more robust.
